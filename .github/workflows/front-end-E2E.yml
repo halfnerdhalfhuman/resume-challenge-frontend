@@ -1,9 +1,9 @@
 name: Front End Deployment & E2E Test
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  #push:
+  #  branches: [ main, master ]
+  #pull_request:
+  #  branches: [ main, master ]
   workflow_dispatch:
     inputs:
       skip_deploy:
@@ -11,6 +11,7 @@ on:
         required: false
         default: 'false'
         type: boolean
+  workflow_call:
 
 permissions:
   id-token: write
