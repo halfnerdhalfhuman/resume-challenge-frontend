@@ -1,0 +1,73 @@
+name: Front End Deployment & E2E Test
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      skip_deploy:
+        description: 'Skip S3 deployment'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+jobs:
+
+  deploy:
+    name: Deploy to S3
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_deploy != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Replace API URL env variable
+        run: |
+          # Create temp file with the substitution
+          sed "s|process.env.API_URL|\"${{ vars.API_URL }}\"|g" ./src/website-visitor-count.js > ./temp.js
+          # Replace the original file with the modified one
+          mv ./temp.js ./src/website-visitor-count.js
+          
+          echo "Verifying API URL replacement:"
+          grep -n "${{ vars.API_URL }}" ./src/website-visitor-count.js || echo "Replacement failed"
+
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Deploy to S3
+        run: |
+          aws s3 sync ./src/ s3://${{ secrets.S3_BUCKET }} --delete
+
+
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      WEBSITE_URL: ${{ vars.WEBSITE_URL }}
+      API_URL: ${{ vars.API_URL }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+    - name: Run Playwright tests
+      run: npx playwright test
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
