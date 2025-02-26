@@ -9,7 +9,7 @@ on:
       skip_deploy:
         description: 'Skip S3 deployment'
         required: false
-        default: 'false'
+        default: 'true'
         type: boolean
 
 permissions:
