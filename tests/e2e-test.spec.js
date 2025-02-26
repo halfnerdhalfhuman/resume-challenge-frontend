@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('increment view count between page loads', async ({ page }) => {
-  const website_url = process.env.WEBSITE_URL
+  const website_url = 'https://' + process.env.WEBSITE_URL
   await page.goto(website_url);
   
   const viewCountElement = page.locator('#visitor-count');
